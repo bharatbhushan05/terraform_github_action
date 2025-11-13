@@ -1,7 +1,7 @@
 resource "aws_security_group" "cluster_sg" {
   name        = "cluster-sg"
   description = "Security group for web application"
-  vpc_id      = aws_vpc.cluster.id
+  vpc_id      = var.vpc_ids
 
   tags = {
     Name        = "cluster-sg"
