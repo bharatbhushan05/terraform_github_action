@@ -10,11 +10,16 @@ resource "aws_security_group" "cluster_sg" {
 }
 
 locals {
-  # Fixed syntax - removed trailing commas and proper list formatting
-  master_node_ports = [80, 443, 22, 8080, 6443, 10250, 10259, 10257]
-  worker_node_ports = [80, 443, 22, 8080, 6443, 10250, 10259, 10257]
+  # Common ports for both master and worker nodes
+  common_ports = [80, 443, 22, 8080, 6443]
   
-  # For port ranges, we need to handle them separately
+  # Master-specific ports
+  master_node_ports = [10250, 10259, 10257]
+  
+  # Worker-specific ports  
+  worker_node_ports = [30000, 30001, 30002]  # Example worker-specific ports
+  
+  # Port ranges
   master_port_ranges = [
     {
       from_port = 2379
@@ -29,23 +34,34 @@ locals {
   ]
 }
 
-# Single port rules for master nodes
-resource "aws_vpc_security_group_ingress_rule" "master_ports" {
-  for_each = toset([for port in local.master_node_ports : tostring(port)])  # ← FIXED: Convert numbers to strings
+# Common ports for both master and worker nodes
+resource "aws_vpc_security_group_ingress_rule" "common_ports" {
+  for_each = toset([for port in local.common_ports : tostring(port)])
 
   security_group_id = aws_security_group.cluster_sg.id
-  cidr_ipv4         = var.vpc_cidr_block  # ← FIXED: Use variable instead of direct reference
+  cidr_ipv4         = var.vpc_cidr_block
   from_port         = each.value
   ip_protocol       = "tcp"
   to_port           = each.value
 }
 
-# Single port rules for worker nodes  
-resource "aws_vpc_security_group_ingress_rule" "worker_ports" {
-  for_each = toset([for port in local.worker_node_ports : tostring(port)])  # ← FIXED: Convert numbers to strings
+# Master-specific ports
+resource "aws_vpc_security_group_ingress_rule" "master_ports" {
+  for_each = toset([for port in local.master_node_ports : tostring(port)])
 
   security_group_id = aws_security_group.cluster_sg.id
-  cidr_ipv4         = var.vpc_cidr_block  # ← FIXED: Use variable instead of direct reference
+  cidr_ipv4         = var.vpc_cidr_block
+  from_port         = each.value
+  ip_protocol       = "tcp"
+  to_port           = each.value
+}
+
+# Worker-specific ports
+resource "aws_vpc_security_group_ingress_rule" "worker_ports" {
+  for_each = toset([for port in local.worker_node_ports : tostring(port)])
+
+  security_group_id = aws_security_group.cluster_sg.id
+  cidr_ipv4         = var.vpc_cidr_block
   from_port         = each.value
   ip_protocol       = "tcp"
   to_port           = each.value
@@ -53,10 +69,10 @@ resource "aws_vpc_security_group_ingress_rule" "worker_ports" {
 
 # Port range rules for master nodes
 resource "aws_vpc_security_group_ingress_rule" "master_port_ranges" {
-  for_each = { for idx, range in local.master_port_ranges : tostring(idx) => range }  # ← FIXED: Convert index to string
+  for_each = { for idx, range in local.master_port_ranges : tostring(idx) => range }
 
   security_group_id = aws_security_group.cluster_sg.id
-  cidr_ipv4         = var.vpc_cidr_block  # ← FIXED: Use variable instead of direct reference
+  cidr_ipv4         = var.vpc_cidr_block
   from_port         = each.value.from_port
   ip_protocol       = "tcp"
   to_port           = each.value.to_port
@@ -64,10 +80,10 @@ resource "aws_vpc_security_group_ingress_rule" "master_port_ranges" {
 
 # Port range rules for worker nodes
 resource "aws_vpc_security_group_ingress_rule" "worker_port_ranges" {
-  for_each = { for idx, range in local.worker_port_ranges : tostring(idx) => range }  # ← FIXED: Convert index to string
+  for_each = { for idx, range in local.worker_port_ranges : tostring(idx) => range }
 
   security_group_id = aws_security_group.cluster_sg.id
-  cidr_ipv4         = var.vpc_cidr_block  # ← FIXED: Use variable instead of direct reference
+  cidr_ipv4         = var.vpc_cidr_block
   from_port         = each.value.from_port
   ip_protocol       = "tcp"
   to_port           = each.value.to_port
