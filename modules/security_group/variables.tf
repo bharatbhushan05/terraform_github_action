@@ -3,6 +3,11 @@ variable "vpc_id" {          # ← Must match "vpc_id" in module block
   type = string
 }
 
+variable "environment" {
+  description = "Environment name"
+  type        = string
+  default     = "dev"
+}
 
 
 /*
